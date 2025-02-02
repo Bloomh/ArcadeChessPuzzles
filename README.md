@@ -1,4 +1,4 @@
-# ArcadeChessPuzzles
+# 8-Bit Chess Puzzles
 Chess puzzles derived from chess.com games with an arcade theme!
 
 ## Usage
