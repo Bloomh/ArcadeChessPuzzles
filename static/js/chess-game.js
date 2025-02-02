@@ -311,10 +311,12 @@ function handlePuzzleTimeout() {
 }
 
 function showGameOver() {
-    // Hide game container and show game over screen
+    // Hide all game elements
     $('#game-container').hide();
     $('#game-stats').hide();
-    $('#game-over-screen').show();
+    
+    // Show game over screen with flex display
+    $('#game-over-screen').css('display', 'flex');
     
     // Update final stats
     $('#final-high-score').text(highScore);
@@ -344,7 +346,7 @@ function resetGame() {
     $('#puzzles-solved-value').text('0');
     
     // Hide game over screen and show difficulty selection
-    $('#game-over-screen').hide();
+    $('#game-over-screen').css('display', 'none');
     $('#game-container').hide();
     $('#game-stats').show();
     $('#difficulty-select').show();

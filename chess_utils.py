@@ -31,7 +31,7 @@ def get_chesscom_games(username):
     
     return all_games
 
-def find_puzzles(game_data, depth=10, evaluation_difference=300):
+def find_puzzles(game_data, depth=8, evaluation_difference=300):
     try:
         pgn = io.StringIO(game_data['pgn'])
         game = chess.pgn.read_game(pgn)
@@ -90,7 +90,7 @@ def find_puzzles(game_data, depth=10, evaluation_difference=300):
         print(f"Error finding puzzles: {str(e)}")
         return
 
-def find_all_puzzles(games, depth=10, evaluation_difference=300):    
+def find_all_puzzles(games, depth=8, evaluation_difference=300):    
     for i,game in enumerate(games):
         print(f"Checking game {i}")
         puzzles = find_puzzles(game, depth=depth, evaluation_difference=evaluation_difference)
