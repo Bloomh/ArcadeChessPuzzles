@@ -4,8 +4,9 @@ import chess.pgn
 from stockfish import Stockfish
 import requests
 import random
+import os
 
-stockfish = Stockfish("/opt/homebrew/bin/stockfish")
+stockfish = Stockfish(os.environ.get("STOCKFISH_PATH"))
 
 def get_chesscom_games(username):
     # Get the list of archives

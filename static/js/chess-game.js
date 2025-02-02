@@ -2,6 +2,19 @@
 let board = null;
 let game = new Chess();
 let currentPuzzle = null;
+let puzzleTimer = null;
+let currentScore = 0;
+let highScore = 0;
+let streak = 0;
+let puzzlesSolved = 0;
+let startTime = null;
+let puzzleTimeLimit = 30; // Will be set by difficulty selection
+let currentPuzzleRevealed = false;
+let lastThousandMilestone = 0;
+const BASE_POINTS = 100;
+const TIME_BONUS_MULTIPLIER = 2;
+const STREAK_BONUS = 50;
+const PENALTY_POINTS = 500;
 
 // Utility functions
 function getPieceName(piece) {
@@ -42,6 +55,275 @@ function formatMove(moveUci) {
     return moveUci; // Fallback to UCI notation
 }
 
+function formatTime(seconds) {
+    if (seconds === -1) return '∞';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+function formatTimeLeft(timeLeft) {
+    if (puzzleTimeLimit === -1) return '';
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = Math.floor(timeLeft % 60);
+    if (minutes === 0) {
+        return `${seconds}s`;
+    }
+    return `${minutes}m ${seconds}s`;
+}
+
+function showStatus(message, type) {
+    const $status = $('#status');
+    $status
+        .html(message)
+        .css({
+            'color': type === 'success' ? '#00ff00' : '#ff0000',
+            'border': `2px solid ${type === 'success' ? '#00ff00' : '#ff0000'}`,
+            'text-shadow': '2px 2px #000',
+        })
+        .addClass('show');
+
+    setTimeout(() => {
+        $status.removeClass('show');
+    }, 1500);
+}
+
+// Achievement handling
+function getRandomAnimation() {
+    const animations = ['matrix', 'rainbow', 'rotate'];
+    return animations[Math.floor(Math.random() * animations.length)];
+}
+
+function getRandomIconAnimation() {
+    const animations = ['sparkle', 'bounce', 'shake'];
+    return animations[Math.floor(Math.random() * animations.length)];
+}
+
+function showMilestone(title, text, subtext = '', duration = 3000) {
+    const $overlay = $('.milestone-overlay');
+    const $content = $('.milestone-content');
+    const $text = $('.milestone-text');
+    const $subtext = $('.milestone-subtext');
+    const $icons = $('.milestone-icon');
+    
+    // Reset classes
+    $content.removeClass('matrix rainbow rotate');
+    $icons.removeClass('sparkle bounce shake');
+    
+    // Add random animations
+    $content.addClass(getRandomAnimation());
+    $icons.each(function() {
+        $(this).addClass(getRandomIconAnimation());
+    });
+    
+    $text.text(text);
+    $subtext.text(subtext);
+    $overlay.addClass('show');
+    
+    // Play retro sound effect
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBkCU1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTqO0vDTgjMGHm7A7+OZSA0PVqzn77BdGAg+ltryxnMpBSl+zPDaizsIGGS57OihUBELTKXh8bllHgY8ktXxz38xBSF1xe/glEILElyx6OyrWBUIQ5zd8sFuJAU3jdDv1oU2Bhxqvu7mnEoODlOq5O+zYBoIPJPY8cp2KwUme8rx3Y4+CRZiturqpVITCkmi4PK8aCAGOY/U8NKCMwYea8Dv45xLDg1TrOfvsl0YCDyV2fLIdigFJX3N8duNPQkXY7fq6qNREwpKouDyvGkhBjiP0/DTgjQGHWzB7+ObSg4OU6zn77JeGQc8ltnyx3YoBSZ9zvDajj4JF2S36uqjURELS6Lg8rxpIQY4j9Pw04I0Bh1swe/jm0oODlOs5++yXhkHPJbZ8sd2KAUmfc7w2o4+CRdkt+rqo1ERDEui4PK8aSEGOI/T8NOCNAYdbMHv45tKDg5TrOfvsl4ZBzyW2fLHdigFJn3O8NqOPgkXZLfq6qNREQxLouDyvGkhBjiP0/DTgjQGHWzB7+ObSg4OU6zn77JeGQc8ltnyx3YoBSZ9zvDajj4JF2S36uqjUREMS6Lg8rxpIQY4j9Pw04I0Bh1swe/jm0oODlOs5++yXhkI=');
+    audio.play();
+    
+    setTimeout(() => {
+        $overlay.removeClass('show');
+    }, duration);
+}
+
+function showAchievementBanner(text, duration = 2000) {
+    const $banner = $('.achievement-banner');
+    const animation = getRandomAnimation();
+    
+    $banner.removeClass('rainbow matrix bounce')
+           .addClass(animation)
+           .text(text)
+           .addClass('show');
+    
+    setTimeout(() => {
+        $banner.removeClass('show ' + animation);
+    }, duration);
+}
+
+function getStreakMessage(streak) {
+    const messages = [
+        { threshold: 20, text: "UNSTOPPABLE! 🔥", icon: "🏆" },
+        { threshold: 15, text: "AMAZING! ⚡", icon: "⚡" },
+        { threshold: 10, text: "INCREDIBLE! 🌟", icon: "🌟" },
+        { threshold: 5, text: "AWESOME! 🎯", icon: "🎯" }
+    ];
+    
+    for (const msg of messages) {
+        if (streak >= msg.threshold) {
+            return `${msg.icon} ${streak} STREAK ${msg.icon} ${msg.text}`;
+        }
+    }
+    return `${streak} PUZZLE STREAK! 🎯`;
+}
+
+function getHighScoreMessage(score) {
+    const messages = [
+        { threshold: 10000, text: "GRANDMASTER STATUS!", subtext: "You're in the hall of fame!" },
+        { threshold: 5000, text: "LEGENDARY!", subtext: "You're making chess history!" },
+        { threshold: 3000, text: "EXTRAORDINARY!", subtext: "Your skills are unmatched!" },
+        { threshold: 1000, text: "IMPRESSIVE!", subtext: "You're rising through the ranks!" }
+    ];
+    
+    for (const msg of messages) {
+        if (score >= msg.threshold) {
+            return {
+                text: `${score} POINTS - ${msg.text}`,
+                subtext: msg.subtext
+            };
+        }
+    }
+    return {
+        text: `${score} POINTS - NEW RECORD!`,
+        subtext: "Keep pushing higher!"
+    };
+}
+
+function checkHighScoreMilestone(newHighScore, prevHighScore) {
+    const currentThousand = Math.floor(newHighScore / 1000);
+    const prevThousand = Math.floor(prevHighScore / 1000);
+    
+    if (currentThousand > prevThousand) {
+        const message = getHighScoreMessage(currentThousand * 1000);
+        showMilestone(
+            'NEW HIGH SCORE!',
+            message.text,
+            message.subtext
+        );
+        lastThousandMilestone = currentThousand * 1000;
+    }
+}
+
+function checkStreakMilestone() {
+    if (streak > 0 && streak % 5 === 0) {
+        showAchievementBanner(getStreakMessage(streak));
+    }
+}
+
+// Scoring system functions
+function updateScore(points) {
+    currentScore = Math.max(0, currentScore + points);
+    $('#score').html(currentScore);
+    
+    if (currentScore > highScore) {
+        const prevHighScore = highScore;
+        highScore = currentScore;
+        $('#high-score').html(highScore);
+        $('#high-score').css('animation', 'blink 0.5s step-end 3');
+        setTimeout(() => {
+            $('#high-score').css('animation', '');
+        }, 1500);
+        
+        // Check high score milestones
+        checkHighScoreMilestone(highScore, prevHighScore);
+    }
+}
+
+function penalizeScore() {
+    updateScore(-PENALTY_POINTS);
+    updateStreak(false);
+}
+
+function resetScore() {
+    currentScore = 0;
+    $('#score').html('0');
+    streak = 0;
+    $('#streak').html('0').removeClass('streak-bonus');
+}
+
+function updateStreak(success) {
+    if (success) {
+        streak++;
+        if (streak > 1) {
+            $('#streak').addClass('streak-bonus');
+        }
+        checkStreakMilestone();
+    } else {
+        streak = 0;
+        $('#streak').removeClass('streak-bonus');
+    }
+    $('#streak').html(streak);
+}
+
+function updatePuzzlesSolved() {
+    puzzlesSolved++;
+    $('#puzzles-solved').html(puzzlesSolved);
+}
+
+function calculateTimeBonus(timeSpent) {
+    const timeLeft = puzzleTimeLimit - timeSpent;
+    return Math.max(0, Math.floor(timeLeft * TIME_BONUS_MULTIPLIER));
+}
+
+function startTimer() {
+    if (puzzleTimer) {
+        clearInterval(puzzleTimer);
+    }
+    
+    // Don't start timer if in untimed mode
+    if (puzzleTimeLimit === -1) {
+        $('#timer-progress').css('width', '100%');
+        $('.stat-label').filter(function() {
+            return $(this).text() === 'TIME LEFT';
+        }).text('UNTIMED');
+        return;
+    }
+    
+    startTime = Date.now();
+    const timerProgress = $('#timer-progress');
+    timerProgress.css('width', '100%');
+    
+    // Reset timer label
+    $('.stat-label').filter(function() {
+        return $(this).text() === 'UNTIMED';
+    }).text('TIME LEFT');
+    
+    puzzleTimer = setInterval(() => {
+        const timeSpent = (Date.now() - startTime) / 1000;
+        const timeLeft = Math.max(0, puzzleTimeLimit - timeSpent);
+        const percentLeft = (timeLeft / puzzleTimeLimit) * 100;
+        
+        timerProgress.css('width', percentLeft + '%');
+        
+        // Update time display
+        if (timeLeft > 0) {
+            $('#timer-display').text(formatTimeLeft(timeLeft));
+        }
+        
+        if (timeSpent >= puzzleTimeLimit) {
+            clearInterval(puzzleTimer);
+            handlePuzzleTimeout();
+        }
+    }, 100);
+}
+
+function handlePuzzleTimeout() {
+    penalizeScore();
+    const bestMove = showCorrectMove();
+    showStatus(`Time's up! The correct move was: ${bestMove}`, 'error');
+    
+    // Load next puzzle after a longer delay to let user see the correct move
+    setTimeout(loadNewPuzzle, 2500);
+}
+
+function showCorrectMove() {
+    if (!currentPuzzle || !currentPuzzle.best_move) return;
+    
+    const bestMove = formatMove(currentPuzzle.best_move);
+    const from = currentPuzzle.best_move.substring(0, 2);
+    const to = currentPuzzle.best_move.substring(2, 4);
+    
+    // Highlight the correct squares
+    $('.square-55d63').removeClass('highlight-solution');
+    $(`[data-square="${from}"]`).addClass('highlight-solution');
+    $(`[data-square="${to}"]`).addClass('highlight-solution');
+    
+    return bestMove;
+}
+
 // Event handlers
 function onDragStart(source, piece, position, orientation) {
     if (game.game_over()) return false;
@@ -66,14 +348,37 @@ function onDrop(source, target) {
     if (currentPuzzle && currentPuzzle.best_move) {
         const moveUci = move.from + move.to;
         if (moveUci === currentPuzzle.best_move) {
-            $('#status').html('Correct! Well done!').css('background', '#e8f5e9');
+            const timeSpent = (Date.now() - startTime) / 1000;
+            // Check time limit only if not in untimed mode
+            if (puzzleTimeLimit === -1 || timeSpent <= puzzleTimeLimit) {
+                if (!currentPuzzleRevealed) {
+                    const timeBonus = puzzleTimeLimit === -1 ? 0 : calculateTimeBonus(timeSpent);
+                    const streakBonus = streak * STREAK_BONUS;
+                    const totalPoints = BASE_POINTS + timeBonus + streakBonus;
+                    
+                    updateScore(totalPoints);
+                    updateStreak(true);
+                    updatePuzzlesSolved();
+                    
+                    showStatus(`Correct! +${totalPoints} points!`, 'success');
+                } else {
+                    showStatus('Correct! (No points - solution was revealed)', 'success');
+                }
+                
+                if (puzzleTimer) {
+                    clearInterval(puzzleTimer);
+                }
+                
+                setTimeout(loadNewPuzzle, 1500);
+            }
             return;
         }
     }
 
     game.undo();
     board.position(game.fen());
-    $('#status').html('Incorrect move. Try again!').css('background', '#ffebee');
+    penalizeScore();
+    showStatus('Incorrect move. -500 points!', 'error');
 }
 
 function onSnapEnd() {
@@ -97,13 +402,32 @@ function onMouseoutSquare(square, piece) {
 
 // Initialize board when document is ready
 $(document).ready(function() {
+    // Handle difficulty selection
+    $('.difficulty-option').on('click', function() {
+        $('.difficulty-option').removeClass('selected');
+        $(this).addClass('selected');
+        puzzleTimeLimit = parseInt($(this).data('seconds'));
+    });
+
+    // Set default difficulty
+    $('.difficulty-option[data-seconds="30"]').addClass('selected');
+    puzzleTimeLimit = 30;
+
     // Handle username submission
     $('#submit-username').on('click', function() {
         const username = $('#username').val();
         if (!username) {
-            $('#status').html('Please enter a username');
+            showStatus('Please enter a username', 'error');
             return;
         }
+
+        if (!$('.difficulty-option.selected').length) {
+            showStatus('Please select a time limit', 'error');
+            return;
+        }
+
+        // Get selected time limit
+        puzzleTimeLimit = parseInt($('.difficulty-option.selected').data('seconds'));
 
         // Disable button and show loading state
         const $button = $(this);
@@ -122,7 +446,7 @@ $(document).ready(function() {
                 loadNewPuzzle();
             },
             error: function(xhr) {
-                $('#status').html('Error: ' + xhr.responseJSON.error);
+                showStatus('Error: ' + xhr.responseJSON.error, 'error');
                 // Re-enable button
                 $button.prop('disabled', false);
                 $button.find('.button-text').removeClass('hidden');
@@ -162,8 +486,9 @@ $(document).ready(function() {
     $('#revealSolution').on('click', function() {
         if (!currentPuzzle || !currentPuzzle.best_move) return;
         
+        currentPuzzleRevealed = true; // Mark puzzle as revealed
         const bestMove = formatMove(currentPuzzle.best_move);
-        $('#status').html(`The best move is: ${bestMove}`).css('background', '#fff3e0');
+        showStatus(`The best move is: ${bestMove}`, 'success');
         
         const from = currentPuzzle.best_move.substring(0, 2);
         const to = currentPuzzle.best_move.substring(2, 4);
@@ -175,9 +500,14 @@ $(document).ready(function() {
 
 // Load a new puzzle
 function loadNewPuzzle() {
+    currentPuzzleRevealed = false; // Reset revealed state for new puzzle
+    
+    // Clear any previous solution highlights
+    $('.square-55d63').removeClass('highlight-solution');
+    
     $.get('/get_puzzle', function(data) {
         if (data.error) {
-            $('#status').html('Error: ' + data.error);
+            showStatus('Error: ' + data.error, 'error');
             // Re-enable Next Puzzle button
             const $button = $('#newPuzzle');
             $button.prop('disabled', false);
@@ -187,6 +517,7 @@ function loadNewPuzzle() {
         }
         
         currentPuzzle = data;
+        startTimer();
         
         // Set board orientation based on player's turn
         board.orientation(data.turn === 'w' ? 'white' : 'black');
@@ -208,14 +539,13 @@ function loadNewPuzzle() {
         board.position(data.prev_fen, false);
         
         // Reset status and remove any highlights
-        $('.square-55d63').removeClass('highlight-solution');
-        $('#status').html('Loading puzzle...').css('background', '#1a1a1a');
+        showStatus('Loading puzzle...', 'success');
         
         // After a short delay, animate to the puzzle position
         setTimeout(() => {
             game.load(data.fen);
             board.position(data.fen, true); // true enables animation
-            $('#status').html('New puzzle loaded. Make your move!').css('background', '#1a1a1a');
+            showStatus('New puzzle loaded. Make your move!', 'success');
             
             // Re-enable Next Puzzle button
             const $button = $('#newPuzzle');
@@ -224,7 +554,7 @@ function loadNewPuzzle() {
             $button.find('.loading-text').addClass('hidden').removeClass('loading');
         }, 1000);
     }).fail(function(xhr) {
-        $('#status').html('Error loading puzzle: ' + xhr.responseJSON.error);
+        showStatus('Error loading puzzle: ' + xhr.responseJSON.error, 'error');
         // Re-enable Next Puzzle button
         const $button = $('#newPuzzle');
         $button.prop('disabled', false);

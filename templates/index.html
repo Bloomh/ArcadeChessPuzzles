@@ -12,7 +12,7 @@
         body {
             font-family: 'Press Start 2P', cursive;
             margin: 0;
-            padding: 20px;
+            padding: 20px 240px 20px 20px; /* Add right padding to make room for stats */
             background: #111;
             color: #fff;
             text-align: center;
@@ -161,13 +161,21 @@
         }
         
         #status {
-            margin: 15px 0;
-            padding: 10px;
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            border-radius: 4px;
-            color: #00ff00;
-            font-size: 12px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: #111;
+            z-index: 1000;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        #status.show {
+            opacity: 1;
         }
         
         .button-group {
@@ -243,15 +251,358 @@
         .black-3c85d {
             background-color: #444 !important;
         }
+        
+        /* Add new styles for scoring and timer */
+        #game-stats {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 220px;
+            background: #111;
+            border-left: 4px solid #00ff00;
+            padding: 20px;
+            font-family: 'Press Start 2P', cursive;
+            color: #00ff00;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .stat-box {
+            margin: 15px 0;
+            padding: 10px;
+            background: #222;
+            border: 2px solid #00ff00;
+        }
+        
+        #score {
+            font-size: 24px;
+            color: #00ff00;
+            text-shadow: 2px 2px #000;
+            margin: 10px 0;
+        }
+        
+        #timer-display {
+            font-size: 18px;
+            color: #00ff00;
+            text-shadow: 2px 2px #000;
+            margin: 10px 0;
+        }
+        
+        #timer-bar {
+            width: 100%;
+            height: 20px;
+            background: #222;
+            border: 2px solid #00ff00;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #timer-progress {
+            width: 100%;
+            height: 100%;
+            background: #00ff00;
+            position: absolute;
+            left: 0;
+            top: 0;
+            transition: width 0.1s linear;
+        }
+        
+        .streak-bonus {
+            color: #ffff00;
+            animation: blink 0.5s step-end infinite;
+        }
+        
+        #stats-title {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #00ff00;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .high-score {
+            color: #ffff00;
+            text-shadow: 2px 2px #000;
+        }
+        
+        /* Style for the difficulty selector */
+        .difficulty-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .difficulty-label {
+            display: block;
+            margin-bottom: 15px;
+            color: #00ff00;
+        }
+
+        .difficulty-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 0 auto;
+            max-width: 400px;
+        }
+
+        .difficulty-option {
+            background: #222;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-option:hover {
+            background: #333;
+            transform: scale(1.05);
+        }
+
+        .difficulty-option.selected {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        /* Milestone animations */
+        @keyframes slideIn {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(0); }
+        }
+
+        @keyframes slideOut {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+
+        @keyframes pixelate {
+            0% { clip-path: inset(0 0 0 0); }
+            20% { clip-path: inset(20% 0 0 0); }
+            40% { clip-path: inset(40% 0 0 0); }
+            60% { clip-path: inset(60% 0 0 0); }
+            80% { clip-path: inset(80% 0 0 0); }
+            100% { clip-path: inset(100% 0 0 0); }
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 2px); }
+            100% { transform: translate(0); }
+        }
+
+        .milestone-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .milestone-overlay.show {
+            opacity: 1;
+        }
+
+        .milestone-content {
+            text-align: center;
+            color: #00ff00;
+            font-family: 'Press Start 2P', cursive;
+            animation: slideIn 0.5s ease-out, glitch 0.2s infinite;
+        }
+
+        .milestone-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ffff00;
+            text-shadow: 2px 2px #000;
+        }
+
+        .milestone-text {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px #000;
+        }
+
+        .milestone-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            animation: pixelate 1s infinite alternate;
+        }
+
+        /* Additional milestone animations */
+        @keyframes rotateIn {
+            0% { transform: rotate(-720deg) scale(0); }
+            100% { transform: rotate(0) scale(1); }
+        }
+
+        @keyframes sparkle {
+            0%, 100% { filter: brightness(100%); }
+            50% { filter: brightness(200%); }
+        }
+
+        @keyframes rainbow {
+            0% { color: #ff0000; }
+            17% { color: #ff8800; }
+            33% { color: #ffff00; }
+            50% { color: #00ff00; }
+            67% { color: #0088ff; }
+            83% { color: #8800ff; }
+            100% { color: #ff0000; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-5deg); }
+            75% { transform: translateX(5px) rotate(5deg); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes matrix {
+            0% { text-shadow: 2px 2px 0 #0f0; }
+            25% { text-shadow: -2px 2px 0 #0f0; }
+            50% { text-shadow: -2px -2px 0 #0f0; }
+            75% { text-shadow: 2px -2px 0 #0f0; }
+            100% { text-shadow: 2px 2px 0 #0f0; }
+        }
+
+        .milestone-content.rotate {
+            animation: rotateIn 1s ease-out;
+        }
+
+        .milestone-content.matrix {
+            animation: matrix 0.5s infinite;
+        }
+
+        .milestone-content.rainbow {
+            animation: rainbow 2s linear infinite;
+        }
+
+        .milestone-icon.sparkle {
+            animation: sparkle 0.5s infinite alternate;
+        }
+
+        .milestone-icon.bounce {
+            animation: bounce 0.5s infinite;
+        }
+
+        .milestone-icon.shake {
+            animation: shake 0.5s infinite;
+        }
+
+        /* Achievement banner */
+        .achievement-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111;
+            border: 2px solid #00ff00;
+            padding: 15px 30px;
+            color: #00ff00;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 14px;
+            text-align: center;
+            z-index: 1500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .achievement-banner.show {
+            opacity: 1;
+            animation: glitch 0.2s infinite;
+        }
+
+        /* Achievement banner variations */
+        .achievement-banner.rainbow {
+            animation: rainbow 2s linear infinite;
+        }
+
+        .achievement-banner.matrix {
+            animation: matrix 0.5s infinite;
+        }
+
+        .achievement-banner.bounce {
+            animation: bounce 0.5s ease-in-out infinite;
+        }
+
+        /* Multiple icons side by side */
+        .milestone-icons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .milestone-subtext {
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
+    <div class="milestone-overlay">
+        <div class="milestone-content">
+            <div class="milestone-icons">
+                <div class="milestone-icon">🏆</div>
+                <div class="milestone-icon">👑</div>
+                <div class="milestone-icon">⭐</div>
+            </div>
+            <div class="milestone-title">ACHIEVEMENT UNLOCKED!</div>
+            <div class="milestone-text"></div>
+            <div class="milestone-subtext"></div>
+        </div>
+    </div>
+    <div class="achievement-banner"></div>
     <h1 class="title">8-BIT CHESS PUZZLES</h1>
     <div id="username-form">
         <input type="text" id="username" placeholder="ENTER CHESS.COM USERNAME">
+        <div class="difficulty-container">
+            <label class="difficulty-label">SELECT TIME LIMIT</label>
+            <div class="difficulty-options">
+                <button class="difficulty-option" data-seconds="10">10 SEC</button>
+                <button class="difficulty-option" data-seconds="20">20 SEC</button>
+                <button class="difficulty-option" data-seconds="30">30 SEC</button>
+                <button class="difficulty-option" data-seconds="60">1 MIN</button>
+                <button class="difficulty-option" data-seconds="120">2 MIN</button>
+                <button class="difficulty-option" data-seconds="300">5 MIN</button>
+                <button class="difficulty-option" data-seconds="600">10 MIN</button>
+                <button class="difficulty-option" data-seconds="-1">∞ TIME</button>
+            </div>
+        </div>
         <button id="submit-username">
             <span class="button-text">START GAME</span>
-            <span class="loading-text hidden">LOADING</span>
+            <span class="loading-text hidden">Loading...</span>
         </button>
     </div>
     <div id="puzzle-container" style="display: none;">
@@ -280,6 +631,32 @@
                     <span class="loading-text hidden">LOADING</span>
                 </button>
             </div>
+        </div>
+    </div>
+    <div id="game-stats">
+        <div id="stats-title">GAME STATS</div>
+        <div class="stat-box">
+            <div class="stat-label">HIGH SCORE</div>
+            <div id="high-score" class="high-score">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">SCORE</div>
+            <div id="score">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">STREAK</div>
+            <div id="streak" class="stat-value">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">TIME LEFT</div>
+            <div id="timer-display" class="stat-value"></div>
+            <div id="timer-bar">
+                <div id="timer-progress"></div>
+            </div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">PUZZLES SOLVED</div>
+            <div id="puzzles-solved" class="stat-value">0</div>
         </div>
     </div>
 </body>

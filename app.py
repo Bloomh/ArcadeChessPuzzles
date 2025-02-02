@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify, session
-import chess
 from chess_utils import get_chesscom_games, find_all_puzzles
 
 app = Flask(__name__, static_url_path='/static')
@@ -21,6 +20,8 @@ def set_username():
     try:
         # Get games and create puzzle iterator
         games = get_chesscom_games(username)
+        if not games:
+            return jsonify({'error': f'No games found for username: {username}. Please check if the username is correct.'}), 404
         print(f"Got {len(games)} games")
         
         # Store username and create new puzzle iterator
@@ -29,8 +30,14 @@ def set_username():
         
         return jsonify({'status': 'success'})
     except Exception as e:
-        print(f"Error in set_username: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        error_msg = str(e)
+        if "404" in error_msg:
+            return jsonify({'error': f'Username "{username}" not found on Chess.com. Please check the spelling.'}), 404
+        elif "rate limit" in error_msg.lower():
+            return jsonify({'error': 'Chess.com API rate limit reached. Please try again in a few minutes.'}), 429
+        else:
+            print(f"Error in set_username: {str(e)}")
+            return jsonify({'error': 'Failed to fetch games. Please try again later.'}), 500
 
 @app.route('/get_puzzle', methods=['GET'])
 def get_puzzle():
@@ -58,12 +65,6 @@ def get_puzzle():
     except Exception as e:
         print(f"Error getting puzzle: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
-@app.route('/make_move', methods=['POST'])
-def make_move():
-    move = request.json.get('move')
-    # Add your move validation logic here
-    return jsonify({'status': 'continue'})
 
 if __name__ == '__main__':
     app.run(debug=True)
