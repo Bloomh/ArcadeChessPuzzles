@@ -105,6 +105,12 @@ $(document).ready(function() {
             return;
         }
 
+        // Disable button and show loading state
+        const $button = $(this);
+        $button.prop('disabled', true);
+        $button.find('.button-text').addClass('hidden');
+        $button.find('.loading-text').removeClass('hidden').addClass('loading');
+
         $.ajax({
             url: '/set_username',
             method: 'POST',
@@ -117,6 +123,10 @@ $(document).ready(function() {
             },
             error: function(xhr) {
                 $('#status').html('Error: ' + xhr.responseJSON.error);
+                // Re-enable button
+                $button.prop('disabled', false);
+                $button.find('.button-text').removeClass('hidden');
+                $button.find('.loading-text').addClass('hidden').removeClass('loading');
             }
         });
     });
@@ -140,19 +150,21 @@ $(document).ready(function() {
     board = Chessboard('board', config);
 
     // Handle new puzzle button
-    $('#newPuzzle').on('click', loadNewPuzzle);
+    $('#newPuzzle').on('click', function() {
+        const $button = $(this);
+        $button.prop('disabled', true);
+        $button.find('.button-text').addClass('hidden');
+        $button.find('.loading-text').removeClass('hidden').addClass('loading');
+        loadNewPuzzle();
+    });
     
     // Handle reveal solution button
     $('#revealSolution').on('click', function() {
         if (!currentPuzzle || !currentPuzzle.best_move) return;
         
-        // Convert UCI move to algebraic notation
         const bestMove = formatMove(currentPuzzle.best_move);
-        
-        // Show the solution with a warning color
         $('#status').html(`The best move is: ${bestMove}`).css('background', '#fff3e0');
         
-        // Highlight the move on the board
         const from = currentPuzzle.best_move.substring(0, 2);
         const to = currentPuzzle.best_move.substring(2, 4);
         $('.square-55d63').removeClass('highlight-solution');
@@ -166,6 +178,11 @@ function loadNewPuzzle() {
     $.get('/get_puzzle', function(data) {
         if (data.error) {
             $('#status').html('Error: ' + data.error);
+            // Re-enable Next Puzzle button
+            const $button = $('#newPuzzle');
+            $button.prop('disabled', false);
+            $button.find('.button-text').removeClass('hidden');
+            $button.find('.loading-text').addClass('hidden').removeClass('loading');
             return;
         }
         
@@ -192,15 +209,26 @@ function loadNewPuzzle() {
         
         // Reset status and remove any highlights
         $('.square-55d63').removeClass('highlight-solution');
-        $('#status').html('Loading puzzle...').css('background', '#e8f5e9');
+        $('#status').html('Loading puzzle...').css('background', '#1a1a1a');
         
         // After a short delay, animate to the puzzle position
         setTimeout(() => {
             game.load(data.fen);
             board.position(data.fen, true); // true enables animation
-            $('#status').html('New puzzle loaded. Make your move!').css('background', '#e8f5e9');
+            $('#status').html('New puzzle loaded. Make your move!').css('background', '#1a1a1a');
+            
+            // Re-enable Next Puzzle button
+            const $button = $('#newPuzzle');
+            $button.prop('disabled', false);
+            $button.find('.button-text').removeClass('hidden');
+            $button.find('.loading-text').addClass('hidden').removeClass('loading');
         }, 1000);
     }).fail(function(xhr) {
         $('#status').html('Error loading puzzle: ' + xhr.responseJSON.error);
+        // Re-enable Next Puzzle button
+        const $button = $('#newPuzzle');
+        $button.prop('disabled', false);
+        $button.find('.button-text').removeClass('hidden');
+        $button.find('.loading-text').addClass('hidden').removeClass('loading');
     });
 }
