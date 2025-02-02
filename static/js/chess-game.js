@@ -3,6 +3,7 @@ let board = null;
 let game = new Chess();
 let currentPuzzle = null;
 let puzzleTimer = null;
+let gameStartTime = null;  // Track when the game session started
 let currentScore = 0;
 let highScore = 0;
 let streak = 0;
@@ -259,54 +260,103 @@ function calculateTimeBonus(timeSpent) {
 }
 
 function startTimer() {
-    if (puzzleTimer) {
-        clearInterval(puzzleTimer);
-    }
-    
-    // Don't start timer if in untimed mode
-    if (puzzleTimeLimit === -1) {
-        $('#timer-progress').css('width', '100%');
+    // Initialize game timer if not started
+    if (!gameStartTime) {
+        gameStartTime = Date.now();
+        
+        if (puzzleTimeLimit === -1) {
+            $('#timer-progress').css('width', '100%');
+            $('.stat-label').filter(function() {
+                return $(this).text() === 'TIME LEFT';
+            }).text('UNTIMED');
+            return;
+        }
+        
+        const timerProgress = $('#timer-progress');
+        timerProgress.css('width', '100%');
+        
+        // Reset timer label
         $('.stat-label').filter(function() {
-            return $(this).text() === 'TIME LEFT';
-        }).text('UNTIMED');
-        return;
+            return $(this).text() === 'UNTIMED';
+        }).text('TIME LEFT');
+        
+        puzzleTimer = setInterval(() => {
+            const timeSpent = (Date.now() - gameStartTime) / 1000;
+            const timeLeft = Math.max(0, puzzleTimeLimit - timeSpent);
+            const percentLeft = (timeLeft / puzzleTimeLimit) * 100;
+            
+            timerProgress.css('width', percentLeft + '%');
+            
+            // Update time display
+            if (timeLeft > 0) {
+                $('#timer-display').text(formatTimeLeft(timeLeft));
+            }
+            
+            if (timeSpent >= puzzleTimeLimit) {
+                clearInterval(puzzleTimer);
+                handlePuzzleTimeout();
+            }
+        }, 100);
     }
     
+    // Update startTime for scoring purposes
     startTime = Date.now();
-    const timerProgress = $('#timer-progress');
-    timerProgress.css('width', '100%');
-    
-    // Reset timer label
-    $('.stat-label').filter(function() {
-        return $(this).text() === 'UNTIMED';
-    }).text('TIME LEFT');
-    
-    puzzleTimer = setInterval(() => {
-        const timeSpent = (Date.now() - startTime) / 1000;
-        const timeLeft = Math.max(0, puzzleTimeLimit - timeSpent);
-        const percentLeft = (timeLeft / puzzleTimeLimit) * 100;
-        
-        timerProgress.css('width', percentLeft + '%');
-        
-        // Update time display
-        if (timeLeft > 0) {
-            $('#timer-display').text(formatTimeLeft(timeLeft));
-        }
-        
-        if (timeSpent >= puzzleTimeLimit) {
-            clearInterval(puzzleTimer);
-            handlePuzzleTimeout();
-        }
-    }, 100);
 }
 
 function handlePuzzleTimeout() {
-    penalizeScore();
-    const bestMove = showCorrectMove();
-    showStatus(`Time's up! The correct move was: ${bestMove}`, 'error');
+    if (puzzleTimer) {
+        clearInterval(puzzleTimer);
+    }
+    showGameOver();
+}
+
+function showGameOver() {
+    // Hide game container and show game over screen
+    $('#game-container').hide();
+    $('#game-stats').hide();
+    $('#game-over-screen').show();
     
-    // Load next puzzle after a longer delay to let user see the correct move
-    setTimeout(loadNewPuzzle, 2500);
+    // Update final stats
+    $('#final-high-score').text(highScore);
+    $('#final-score').text(currentScore);
+    $('#final-puzzles-solved').text(puzzlesSolved);
+    $('#final-streak').text(streak);
+    
+    // Clear the board
+    board.clear();
+    
+    // Disable board interactions
+    board.draggable = false;
+}
+
+function resetGame() {
+    // Reset all game variables
+    currentScore = 0;
+    streak = 0;
+    puzzlesSolved = 0;
+    startTime = null;
+    gameStartTime = null;
+    currentPuzzleRevealed = false;
+    
+    // Reset UI
+    $('#score-value').text('0');
+    $('#streak-value').text('0');
+    $('#puzzles-solved-value').text('0');
+    
+    // Hide game over screen and show difficulty selection
+    $('#game-over-screen').hide();
+    $('#game-container').hide();
+    $('#game-stats').show();
+    $('#difficulty-select').show();
+    
+    // Reset and re-enable board
+    board.start();
+    board.draggable = true;
+    
+    // Clear any remaining timer
+    if (puzzleTimer) {
+        clearInterval(puzzleTimer);
+    }
 }
 
 function showCorrectMove() {
@@ -365,10 +415,6 @@ function onDrop(source, target) {
                     showStatus('Correct! (No points - solution was revealed)', 'success');
                 }
                 
-                if (puzzleTimer) {
-                    clearInterval(puzzleTimer);
-                }
-                
                 setTimeout(loadNewPuzzle, 1500);
             }
             return;
@@ -407,6 +453,7 @@ $(document).ready(function() {
         $('.difficulty-option').removeClass('selected');
         $(this).addClass('selected');
         puzzleTimeLimit = parseInt($(this).data('seconds'));
+        gameStartTime = null;  // Reset game start time when changing difficulty
     });
 
     // Set default difficulty
@@ -495,6 +542,11 @@ $(document).ready(function() {
         $('.square-55d63').removeClass('highlight-solution');
         $(`[data-square="${from}"]`).addClass('highlight-solution');
         $(`[data-square="${to}"]`).addClass('highlight-solution');
+    });
+    
+    // Handle play again button
+    $('#play-again').on('click', function() {
+        resetGame();
     });
 });
 

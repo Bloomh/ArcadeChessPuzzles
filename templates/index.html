@@ -568,6 +568,57 @@
             margin-top: 10px;
             opacity: 0.8;
         }
+        
+        #game-over-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #000;
+            padding: 2rem;
+            text-align: center;
+            z-index: 1000;
+            min-width: 300px;
+        }
+        
+        #game-over-screen .retro-title {
+            color: #ff0000;
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px #ff6b6b;
+            animation: pulse 1s infinite;
+        }
+        
+        #game-over-screen .stats-container {
+            margin: 2rem 0;
+        }
+        
+        #game-over-screen .stat-item {
+            margin: 1rem 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border: 2px solid #00ff00;
+        }
+        
+        #game-over-screen .stat-label {
+            color: #00ff00;
+            font-size: 1.2rem;
+            text-shadow: 1px 1px #000;
+        }
+        
+        #game-over-screen .stat-value {
+            color: #fff;
+            font-size: 1.5rem;
+            text-shadow: 1px 1px #000;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -588,16 +639,15 @@
     <div id="username-form">
         <input type="text" id="username" placeholder="ENTER CHESS.COM USERNAME">
         <div class="difficulty-container">
-            <label class="difficulty-label">SELECT TIME LIMIT</label>
+            <label class="difficulty-label">SELECT PUZZLE TIME LIMIT</label>
             <div class="difficulty-options">
                 <button class="difficulty-option" data-seconds="10">10 SEC</button>
-                <button class="difficulty-option" data-seconds="20">20 SEC</button>
                 <button class="difficulty-option" data-seconds="30">30 SEC</button>
                 <button class="difficulty-option" data-seconds="60">1 MIN</button>
-                <button class="difficulty-option" data-seconds="120">2 MIN</button>
+                <button class="difficulty-option" data-seconds="180">3 MIN</button>
                 <button class="difficulty-option" data-seconds="300">5 MIN</button>
                 <button class="difficulty-option" data-seconds="600">10 MIN</button>
-                <button class="difficulty-option" data-seconds="-1">∞ TIME</button>
+                <button class="difficulty-option" data-seconds="-1">UNLIMITED</button>
             </div>
         </div>
         <button id="submit-username">
@@ -632,6 +682,30 @@
                 </button>
             </div>
         </div>
+    </div>
+    <div id="game-over-screen" style="display: none;" class="pixel-border">
+        <h2 class="retro-title">GAME OVER</h2>
+        <div class="stats-container">
+            <div class="stat-item">
+                <span class="stat-label">HIGH SCORE</span>
+                <span id="final-high-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">THIS GAME</span>
+                <span id="final-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">PUZZLES SOLVED</span>
+                <span id="final-puzzles-solved" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">BEST STREAK</span>
+                <span id="final-streak" class="stat-value">0</span>
+            </div>
+        </div>
+        <button id="play-again" class="arcade-btn">
+            <span class="button-text">PLAY AGAIN</span>
+        </button>
     </div>
     <div id="game-stats">
         <div id="stats-title">GAME STATS</div>
