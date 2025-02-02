@@ -1,0 +1,38 @@
+.chess-board {
+    width: 400px;
+    height: 400px;
+}
+
+.square-55d63 {
+    position: relative;
+}
+
+/* Style for pieces */
+.piece-417db {
+    background-size: 95%;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 95%;
+    height: 95%;
+}
+
+/* White pieces */
+.white-piece.wp { background-image: url('/static/images/white_pawn.svg'); }
+.white-piece.wr { background-image: url('/static/images/white_rook.svg'); }
+.white-piece.wn { background-image: url('/static/images/white_knight.svg'); }
+.white-piece.wb { background-image: url('/static/images/white_bishop.svg'); }
+.white-piece.wq { background-image: url('/static/images/white_queen.svg'); }
+.white-piece.wk { background-image: url('/static/images/white_king.svg'); }
+
+/* Black pieces */
+.black-piece.bp { background-image: url('/static/images/black_pawn.svg'); }
+.black-piece.br { background-image: url('/static/images/black_rook.svg'); }
+.black-piece.bn { background-image: url('/static/images/black_knight.svg'); }
+.black-piece.bb { background-image: url('/static/images/black_bishop.svg'); }
+.black-piece.bq { background-image: url('/static/images/black_queen.svg'); }
+.black-piece.bk { background-image: url('/static/images/black_king.svg'); }
+
+/* Highlight styles */
+.highlight-valid-move {
+    background-color: rgba(0, 255, 0, 0.1);
+}
